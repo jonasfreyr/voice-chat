@@ -6,12 +6,12 @@ out_frames = []
 in_frames = []
 
 voice_port_receiving = 65432
-voice_port_sending = voice_port_receiving
+voice_port_sending = 65433
 
 def udpStream(udp):
     while True:
         if len(out_frames) > 0:
-            udp.sendto(out_frames.pop(0), ("127.0.0.1", 12345))
+            udp.sendto(out_frames.pop(0), ("34.121.32.86", voice_port_sending))
 
     udp.close()
 
@@ -30,8 +30,8 @@ def record(stream, CHUNK):
 def play(stream, CHUNK):
     BUFFER = 10
     while True:
-            if len(in_frames) == BUFFER:
-                while True:
+            if len(in_frames) >= BUFFER:
+                while len(in_frames) != 0:
                     stream.write(in_frames.pop(0), CHUNK)
 
 
@@ -39,12 +39,12 @@ if __name__ == "__main__":
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
-    RATE = 44100
+    RATE = 96000
 
     p = pyaudio.PyAudio()
 
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp.connect(("127.0.0.1", voice_port_receiving))
+    udp.bind(('', voice_port_receiving))
 
     stream_output = p.open(format=FORMAT,
                     channels=CHANNELS,
@@ -60,8 +60,8 @@ if __name__ == "__main__":
                     frames_per_buffer = CHUNK,
                     )
 
-    record_thread = Thread(target = record, args = (stream_input, CHUNK,))
-    send_thread = Thread(target = udpStream, args=(udp, ))
+    record_thread = Thread(target=record, args=(stream_input, CHUNK,))
+    send_thread = Thread(target=udpStream, args=(udp, ))
 
     receive_thread = Thread(target=receive_voice_data, args=(udp, ))
     play_thread = Thread(target=play, args=(stream_output, CHUNK,))
